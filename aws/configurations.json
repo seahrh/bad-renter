@@ -1,0 +1,28 @@
+[
+  {
+    "Classification": "hive-site",
+    "Properties": {
+      "hive.metastore.client.factory.class": "com.amazonaws.glue.catalog.metastore.AWSGlueDataCatalogHiveClientFactory",
+      "hive.metastore.warehouse.dir": "s3://com.sgcharts.ap-southeast-1/hive/warehouse"
+    }
+  },
+  {
+    "Classification": "spark",
+    "Properties": {
+      "maximizeResourceAllocation": "true"
+    }
+  },
+  {
+    "Classification": "spark-defaults",
+    "Properties": {
+      "spark.serializer": "org.apache.spark.serializer.KryoSerializer",
+      "spark.sql.warehouse.dir": "s3://com.sgcharts.ap-southeast-1/hive/warehouse"
+    }
+  },
+  {
+    "Classification": "spark-hive-site",
+    "Properties": {
+      "hive.metastore.client.factory.class": "com.amazonaws.glue.catalog.metastore.AWSGlueDataCatalogHiveClientFactory"
+    }
+  }
+]
