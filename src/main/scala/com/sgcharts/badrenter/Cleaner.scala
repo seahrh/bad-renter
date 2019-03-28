@@ -1,7 +1,41 @@
 package com.sgcharts.badrenter
 
+import org.apache.spark.sql.{DataFrame, SparkSession}
+
 object Cleaner extends Log4jLogging {
   private val APP_NAME: String = getClass.getName
+
+  def main(args: Array[String]): Unit = {
+    implicit val params: Params = parse(args = args)
+    implicit val spark: SparkSession = SparkSession.builder
+      .appName(APP_NAME)
+      .enableHiveSupport()
+      .getOrCreate()
+    try {
+      val df: DataFrame = extract()
+      df.explain()
+      log.info(s"count=${df.count}")
+    } finally {
+      spark.close()
+    }
+  }
+
+  private def extract()(implicit params: Params, spark: SparkSession): DataFrame = {
+    val sql: String =
+      s"""
+         |select name
+         |,dob
+         |,house_id
+         |,house_zip
+         |,payment_date
+         |,payment_amount
+         |,rent_amount
+         |from ${params.srcDb}.${params.srcTable}
+         |order by rand()
+      """.stripMargin
+    log.info(sql)
+    spark.sql(sql)
+  }
 
   private def parse(args: Array[String]): Params = {
     val parser = new scopt.OptionParser[Params](APP_NAME) {
