@@ -21,13 +21,13 @@ CREATE TABLE `rent`.`payment`(
   `payment_date` date,
   `payment_date_year` int,
   `payment_date_month` int,
-  `payment_date_week` int comment 'week number of year',
-  `payment_date_day` int comment 'day of month',
+  `payment_date_day_of_week` int,
+  `payment_date_day_of_month` int,
   `payment_amount` int,
   `rent_amount` int,
   `default_amount` int
 )
-PARTITIONED BY (ds string comment 'datetime string in YYYYMMDDHH format')
+PARTITIONED BY (ds string comment 'datetime string in YYYYMMDD format')
 CLUSTERED BY(id) SORTED BY(payment_date) INTO 16 BUCKETS
 stored as parquet
 ;
