@@ -46,7 +46,7 @@ final case class ParquetTablePartition[T](
                                            override val path: String,
                                            override val partition: String,
                                            override val numFiles: Int = 1
-                                         )(spark: SparkSession) extends TablePartition[T] {
+                                         )(implicit spark: SparkSession) extends TablePartition[T] {
   override val sparkSession: SparkSession = spark
 
   override def overwrite(): Unit = {
@@ -67,7 +67,7 @@ final case class OrcTablePartition[T](
                                            override val path: String,
                                            override val partition: String,
                                            override val numFiles: Int = 1
-                                         )(spark: SparkSession) extends TablePartition[T] {
+                                         )(implicit spark: SparkSession) extends TablePartition[T] {
   override val sparkSession: SparkSession = spark
 
   override def overwrite(): Unit = {

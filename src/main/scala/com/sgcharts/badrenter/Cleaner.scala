@@ -4,21 +4,24 @@ import java.time.format.DateTimeFormatter
 import java.time.{LocalDate, Period, ZoneOffset}
 import java.util.Date
 
-import org.apache.spark.sql.{DataFrame, Row, SparkSession}
+import org.apache.spark.sql.{DataFrame, Dataset, Encoders, Row, SparkSession}
 
 object Cleaner extends Log4jLogging {
   private val APP_NAME: String = getClass.getName
 
   def main(args: Array[String]): Unit = {
     implicit val params: Params = parse(args = args)
+    log.info(params)
     implicit val spark: SparkSession = SparkSession.builder
       .appName(APP_NAME)
       .enableHiveSupport()
       .getOrCreate()
     try {
       val df: DataFrame = extract()
-      df.explain()
-      transform(df)
+      df.explain
+      val ds: Dataset[Payment] = transform(df)
+      ds.explain
+      load(ds)
     } finally {
       spark.close()
     }
@@ -41,9 +44,24 @@ object Cleaner extends Log4jLogging {
     spark.sql(sql)
   }
 
-  private def transform(df: DataFrame)
-                       (implicit params: Params, spark: SparkSession): Unit = {
+  private def transform(it: Iterator[Row]): Iterator[Payment] = {
+    it.map(row => {
+      Payment.from(row)
+    })
+  }
 
+  private def transform(df: DataFrame): Dataset[Payment] = {
+    df.mapPartitions(transform)(Encoders.product[Payment])
+  }
+
+  private def load(ds: Dataset[Payment])(implicit params: Params, spark: SparkSession): Unit = {
+    ParquetTablePartition[Payment](
+      ds = ds,
+      db = params.sinkDb,
+      table = params.sinkTable,
+      path = params.sinkPath,
+      partition = params.sinkPartition
+    ).overwrite()
   }
 
   private def parse(args: Array[String]): Params = {
@@ -100,7 +118,7 @@ private final case class Payment(
 private object Payment {
   private val today: LocalDate = LocalDate.now(ZoneOffset.UTC)
 
-  private[badrenter] def transform(row: Row): Payment = {
+  private[badrenter] def from(row: Row): Payment = {
     val name = row.getAs[String]("name")
     val dob_str = row.getAs[String]("dob")
     val house_id = row.getAs[Int]("house_id")
@@ -120,19 +138,19 @@ private object Payment {
     val payment_amount: Int = paymentAmount(opa, rent_amount)
     val default_amount: Int = rent_amount - payment_amount
     Payment(
-      id=id,
-      name=name,
-      age=age,
-      house_id=house_id,
-      house_zip=house_zip,
-      payment_date=payment_date,
-      payment_date_year=payment_date_year,
-      payment_date_month=payment_date_month,
-      payment_date_day_of_week=payment_date_day_of_week,
-      payment_date_day_of_month=payment_date_day_of_month,
-      payment_amount=payment_amount,
-      rent_amount=rent_amount,
-      default_amount=default_amount
+      id = id,
+      name = name,
+      age = age,
+      house_id = house_id,
+      house_zip = house_zip,
+      payment_date = payment_date,
+      payment_date_year = payment_date_year,
+      payment_date_month = payment_date_month,
+      payment_date_day_of_week = payment_date_day_of_week,
+      payment_date_day_of_month = payment_date_day_of_month,
+      payment_amount = payment_amount,
+      rent_amount = rent_amount,
+      default_amount = default_amount
     )
   }
 
