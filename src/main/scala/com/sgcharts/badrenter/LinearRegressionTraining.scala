@@ -2,7 +2,7 @@ package com.sgcharts.badrenter
 
 import org.apache.spark.ml.Pipeline
 import org.apache.spark.ml.evaluation.RegressionEvaluator
-import org.apache.spark.ml.feature.{Bucketizer, OneHotEncoderEstimator, VectorAssembler}
+import org.apache.spark.ml.feature.{Bucketizer, OneHotEncoderEstimator, StringIndexer, VectorAssembler}
 import org.apache.spark.ml.regression.LinearRegression
 import org.apache.spark.ml.tuning.{CrossValidator, CrossValidatorModel, ParamGridBuilder}
 import org.apache.spark.sql.{DataFrame, SparkSession}
@@ -61,10 +61,17 @@ object LinearRegressionTraining extends Log4jLogging {
     spark.sql(sql)
   }
 
+  private def nameIndex(): StringIndexer = {
+    new StringIndexer()
+      .setInputCol("name")
+      .setOutputCol("name_index")
+      .setHandleInvalid("keep")
+  }
+
   private def oneHotEncoder(): OneHotEncoderEstimator = {
     new OneHotEncoderEstimator()
       .setInputCols(Array(
-        "name",
+        "name_index",
         "house_id",
         "house_zip",
         "payment_date_year",
@@ -81,6 +88,7 @@ object LinearRegressionTraining extends Log4jLogging {
         "payment_date_day_of_week_1hot",
         "payment_date_day_of_month_1hot"
       ))
+      .setHandleInvalid("keep")
   }
 
   private def ageBuckets(): Bucketizer = {
@@ -114,11 +122,12 @@ object LinearRegressionTraining extends Log4jLogging {
   }
 
   private def linearRegressionValidator(): CrossValidator = {
+    val ni = nameIndex()
     val oh = oneHotEncoder()
     val ab = ageBuckets()
     val fs = features()
     val lr = linearRegression()
-    val pipe = new Pipeline().setStages(Array(oh, ab, fs, lr))
+    val pipe = new Pipeline().setStages(Array(ni, oh, ab, fs, lr))
     val grid = new ParamGridBuilder()
       .addGrid(lr.regParam, Array(0.1, 0.01))
       .build()
