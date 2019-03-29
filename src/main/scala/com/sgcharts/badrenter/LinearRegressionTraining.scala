@@ -2,7 +2,7 @@ package com.sgcharts.badrenter
 
 import org.apache.spark.sql.{DataFrame, Dataset, SparkSession}
 import com.sgcharts.badrenter.LinearRegressionTraining.Params
-import org.apache.spark.ml.feature.Bucketizer
+import org.apache.spark.ml.feature.{Bucketizer, OneHotEncoderEstimator}
 import org.apache.spark.ml.regression.LinearRegression
 import org.apache.spark.ml.{Pipeline, PipelineModel}
 
@@ -77,6 +77,25 @@ object LinearRegressionTraining extends Log4jLogging {
   }
 
   private def pipeline()(implicit params: Params): Pipeline = {
+    val oneHot = new OneHotEncoderEstimator()
+      .setInputCols(Array(
+        "name",
+        "house_id",
+        "house_zip",
+        "payment_date_year",
+        "payment_date_month",
+        "payment_date_day_of_week",
+        "payment_date_day_of_month"
+      ))
+      .setOutputCols(Array(
+        "name_1hot",
+        "house_id_1hot",
+        "house_zip_1hot",
+        "payment_date_year_1hot",
+        "payment_date_month_1hot",
+        "payment_date_day_of_week_1hot",
+        "payment_date_day_of_month_1hot"
+      ))
     val ageBuckets = new Bucketizer()
       .setInputCol("age")
       .setOutputCol("age_buckets")
@@ -84,7 +103,7 @@ object LinearRegressionTraining extends Log4jLogging {
     val lr = new LinearRegression()
       .setMaxIter(3)
       .setRegParam(0.001)
-    new Pipeline().setStages(Array(ageBuckets, lr))
+    new Pipeline().setStages(Array(oneHot, ageBuckets, lr))
   }
 
   def main(args: Array[String]): Unit = {
