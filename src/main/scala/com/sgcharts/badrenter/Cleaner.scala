@@ -44,14 +44,14 @@ object Cleaner extends Log4jLogging {
     spark.sql(sql)
   }
 
-  private def transform(it: Iterator[Row]): Iterator[Payment] = {
+  private def transform(params: Params)(it: Iterator[Row]): Iterator[Payment] = {
     it.map(row => {
-      Payment.from(row)
+      Payment.from(row, params)
     })
   }
 
-  private def transform(df: DataFrame): Dataset[Payment] = {
-    df.mapPartitions(transform)(Encoders.product[Payment])
+  private def transform(df: DataFrame)(implicit params: Params): Dataset[Payment] = {
+    df.mapPartitions(transform(params))(Encoders.product[Payment])
   }
 
   private def load(ds: Dataset[Payment])(implicit params: Params, spark: SparkSession): Unit = {
@@ -85,6 +85,9 @@ object Cleaner extends Log4jLogging {
       opt[String]("sink_path").action((x, c) =>
         c.copy(sinkPath = x)
       ).text("path where partition is stored")
+      opt[String]("default_dob").action((x, c) =>
+        c.copy(defaultDob = x)
+      ).text("imput date-of-birth in YYYYMMDD")
       help("help").text("prints this usage text")
     }
     // Load parameters
@@ -118,7 +121,7 @@ private final case class Payment(
 private object Payment {
   private val today: LocalDate = LocalDate.now(ZoneOffset.UTC)
 
-  private[badrenter] def from(row: Row): Payment = {
+  private[badrenter] def from(row: Row, params: Params): Payment = {
     val name = row.getAs[String]("name")
     val dob_str = row.getAs[String]("dob")
     val house_id = row.getAs[Int]("house_id")
@@ -127,7 +130,7 @@ private object Payment {
     val opa: Option[Int] = Option(row.getAs[Int]("payment_amount"))
     val rent_amount = row.getAs[Int]("rent_amount")
     val id = row.getAs[Long]("id")
-    val dob: LocalDate = toLocalDate(dob_str)
+    val dob: LocalDate = cleanDob(dobStr = dob_str, defaultDobStr = params.defaultDob)
     val age: Int = Period.between(dob, today).getYears
     val payment_date_ld: LocalDate = toLocalDate(payment_date_str)
     val payment_date_year: Int = payment_date_ld.getYear
@@ -172,6 +175,24 @@ private object Payment {
     }
     LocalDate.parse(dateStr, DateTimeFormatter.ofPattern(pattern))
   }
+
+  private def cleanDob(dobStr: String, defaultDobStr: String): LocalDate = {
+    val dob: LocalDate = toLocalDate(dobStr)
+    val default: LocalDate = toLocalDate(defaultDobStr)
+    if (dob.isBefore(today)) {
+      val year: Int = 1900
+      val month: Int = 1
+      val dayOfMonth: Int = 1
+      val invalidDate: LocalDate =  LocalDate.of(year, month, dayOfMonth)
+      if (dob.isEqual(invalidDate)) {
+        default
+      } else {
+        dob
+      }
+    } else {
+      default
+    }
+  }
 }
 
 private final case class Params(
@@ -180,5 +201,6 @@ private final case class Params(
                                  sinkDb: String = "",
                                  sinkTable: String = "",
                                  sinkPartition: String = "",
-                                 sinkPath: String = ""
+                                 sinkPath: String = "",
+                                 defaultDob: String = ""
                                )
