@@ -9,7 +9,7 @@ CREATE EXTERNAL TABLE `rent`.`raw`(
 ROW FORMAT DELIMITED
 FIELDS TERMINATED BY ','
 STORED AS TEXTFILE
-LOCATION 's3://com.sgcharts.ap-southeast-1/tmp/clean'
+LOCATION 's3://com.sgcharts.ap-southeast-1/hive/warehouse/rent.db/raw'
 ;
 
 CREATE TABLE `rent`.`payment`(
