@@ -4,6 +4,7 @@ import java.time.format.DateTimeFormatter
 import java.time.{LocalDate, Period, ZoneOffset}
 import java.sql.Date
 
+import com.sgcharts.badrenter.Cleaner.Params
 import org.apache.spark.sql.{DataFrame, Dataset, Encoders, Row, SparkSession}
 
 object Cleaner extends Log4jLogging {
@@ -98,6 +99,17 @@ object Cleaner extends Log4jLogging {
         throw new IllegalStateException("fail to parse args")
     }
   }
+
+  private[badrenter] final case class Params(
+                                              srcDb: String = "",
+                                              srcTable: String = "",
+                                              sinkDb: String = "",
+                                              sinkTable: String = "",
+                                              sinkPartition: String = "",
+                                              sinkPath: String = "",
+                                              defaultDob: String = ""
+                                            )
+
 }
 
 // Schema of the sink table
@@ -183,7 +195,7 @@ private object Payment {
       val year: Int = 1900
       val month: Int = 1
       val dayOfMonth: Int = 1
-      val invalidDate: LocalDate =  LocalDate.of(year, month, dayOfMonth)
+      val invalidDate: LocalDate = LocalDate.of(year, month, dayOfMonth)
       if (dob.isEqual(invalidDate)) {
         default
       } else {
@@ -194,13 +206,3 @@ private object Payment {
     }
   }
 }
-
-private final case class Params(
-                                 srcDb: String = "",
-                                 srcTable: String = "",
-                                 sinkDb: String = "",
-                                 sinkTable: String = "",
-                                 sinkPartition: String = "",
-                                 sinkPath: String = "",
-                                 defaultDob: String = ""
-                               )
