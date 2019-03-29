@@ -2,7 +2,7 @@ package com.sgcharts.badrenter
 
 import org.apache.spark.ml.Pipeline
 import org.apache.spark.ml.evaluation.RegressionEvaluator
-import org.apache.spark.ml.feature.{Bucketizer, OneHotEncoderEstimator}
+import org.apache.spark.ml.feature.{Bucketizer, OneHotEncoderEstimator, VectorAssembler}
 import org.apache.spark.ml.regression.LinearRegression
 import org.apache.spark.ml.tuning.{CrossValidator, CrossValidatorModel, ParamGridBuilder}
 import org.apache.spark.sql.{DataFrame, SparkSession}
@@ -90,17 +90,36 @@ object LinearRegressionTraining extends Log4jLogging {
       .setSplits(Array(Double.NegativeInfinity, 0.0, 20.0, 30.0, 40.0, 50.0, 60.0, Double.PositiveInfinity))
   }
 
+  private def features(): VectorAssembler = {
+    new VectorAssembler()
+      .setInputCols(Array(
+        "name_1hot",
+        "house_id_1hot",
+        "house_zip_1hot",
+        "payment_date_year_1hot",
+        "payment_date_month_1hot",
+        "payment_date_day_of_week_1hot",
+        "payment_date_day_of_month_1hot",
+        "age_buckets",
+        "rent_amount"
+      ))
+      .setOutputCol("features")
+  }
+
   private def linearRegression(): LinearRegression = {
     new LinearRegression()
       .setMaxIter(3)
       .setRegParam(0.001)
+      .setLabelCol("default_amount")
+      .setFeaturesCol("features")
   }
 
   private def linearRegressionValidator(): CrossValidator = {
     val oh = oneHotEncoder()
     val ab = ageBuckets()
+    val fs = features()
     val lr = linearRegression()
-    val pipe = new Pipeline().setStages(Array(oh, ab, lr))
+    val pipe = new Pipeline().setStages(Array(oh, ab, fs, lr))
     val grid = new ParamGridBuilder()
       .addGrid(lr.regParam, Array(0.1, 0.01))
       .build()
@@ -131,7 +150,7 @@ object LinearRegressionTraining extends Log4jLogging {
            |getEstimatorParamMaps=${lrm.getEstimatorParamMaps}
            |avgMetrics=${lrm.avgMetrics}
          """.stripMargin)
-      lrm.save("s3://com.sgcharts.ap-southeast-1/models/linear_regression")
+      lrm.save("s3://com.sgcharts.ap-southeast-1/models/linear_regression_r2")
     } finally {
       spark.close()
     }
