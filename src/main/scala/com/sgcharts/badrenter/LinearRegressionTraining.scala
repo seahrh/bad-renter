@@ -1,10 +1,11 @@
 package com.sgcharts.badrenter
 
-import org.apache.spark.sql.{DataFrame, Dataset, SparkSession}
-import com.sgcharts.badrenter.LinearRegressionTraining.Params
+import org.apache.spark.ml.Pipeline
+import org.apache.spark.ml.evaluation.RegressionEvaluator
 import org.apache.spark.ml.feature.{Bucketizer, OneHotEncoderEstimator}
 import org.apache.spark.ml.regression.LinearRegression
-import org.apache.spark.ml.{Pipeline, PipelineModel}
+import org.apache.spark.ml.tuning.{CrossValidator, CrossValidatorModel, ParamGridBuilder}
+import org.apache.spark.sql.{DataFrame, SparkSession}
 
 object LinearRegressionTraining extends Log4jLogging {
   private val APP_NAME: String = getClass.getName
@@ -12,10 +13,6 @@ object LinearRegressionTraining extends Log4jLogging {
   private[badrenter] final case class Params(
                                               srcDb: String = "",
                                               srcTable: String = "",
-                                              sinkDb: String = "",
-                                              sinkTable: String = "",
-                                              sinkPartition: String = "",
-                                              sinkPath: String = "",
                                               testSetFirstId: Int = 0
                                             )
 
@@ -28,18 +25,6 @@ object LinearRegressionTraining extends Log4jLogging {
       opt[String]("src_table").action((x, c) =>
         c.copy(srcTable = x)
       ).text("source table")
-      opt[String]("sink_db").action((x, c) =>
-        c.copy(sinkDb = x)
-      ).text("hive database")
-      opt[String]("sink_table").action((x, c) =>
-        c.copy(sinkTable = x)
-      ).text("hive table")
-      opt[String]("sink_partition").action((x, c) =>
-        c.copy(sinkPartition = x)
-      ).text("hive partition")
-      opt[String]("sink_path").action((x, c) =>
-        c.copy(sinkPath = x)
-      ).text("path where partition is stored")
       opt[Int]("test_set_first_id").action((x, c) =>
         c.copy(testSetFirstId = x)
       ).text("First id that marks the beginning of test set")
@@ -76,8 +61,8 @@ object LinearRegressionTraining extends Log4jLogging {
     spark.sql(sql)
   }
 
-  private def pipeline()(implicit params: Params): Pipeline = {
-    val oneHot = new OneHotEncoderEstimator()
+  private def oneHotEncoder(): OneHotEncoderEstimator = {
+    new OneHotEncoderEstimator()
       .setInputCols(Array(
         "name",
         "house_id",
@@ -96,14 +81,38 @@ object LinearRegressionTraining extends Log4jLogging {
         "payment_date_day_of_week_1hot",
         "payment_date_day_of_month_1hot"
       ))
-    val ageBuckets = new Bucketizer()
+  }
+
+  private def ageBuckets(): Bucketizer = {
+    new Bucketizer()
       .setInputCol("age")
       .setOutputCol("age_buckets")
       .setSplits(Array(Double.NegativeInfinity, 0.0, 20.0, 30.0, 40.0, 50.0, 60.0, Double.PositiveInfinity))
-    val lr = new LinearRegression()
+  }
+
+  private def linearRegression(): LinearRegression = {
+    new LinearRegression()
       .setMaxIter(3)
       .setRegParam(0.001)
-    new Pipeline().setStages(Array(oneHot, ageBuckets, lr))
+  }
+
+  private def linearRegressionValidator(): CrossValidator = {
+    val oh = oneHotEncoder()
+    val ab = ageBuckets()
+    val lr = linearRegression()
+    val pipe = new Pipeline().setStages(Array(oh, ab, lr))
+    val grid = new ParamGridBuilder()
+      .addGrid(lr.regParam, Array(0.1, 0.01))
+      .build()
+    val eval = new RegressionEvaluator().setMetricName("r2")
+    val seed: Long = 11
+    new CrossValidator()
+      .setEstimator(pipe)
+      .setEvaluator(eval)
+      .setEstimatorParamMaps(grid)
+      .setNumFolds(3)
+      .setParallelism(2)  // Evaluate up to 2 parameter settings in parallel
+      .setSeed(seed)
   }
 
   def main(args: Array[String]): Unit = {
@@ -115,8 +124,14 @@ object LinearRegressionTraining extends Log4jLogging {
       .getOrCreate()
     try {
       val train: DataFrame = extract()
-      val pipe: Pipeline = pipeline()
-      val model: PipelineModel = pipe.fit(train)
+      val lrv: CrossValidator = linearRegressionValidator()
+      val lrm: CrossValidatorModel = lrv.fit(train)
+      log.info(
+        s"""
+           |getEstimatorParamMaps=${lrm.getEstimatorParamMaps}
+           |avgMetrics=${lrm.avgMetrics}
+         """.stripMargin)
+      lrm.save("s3://com.sgcharts.ap-southeast-1/models/linear_regression")
     } finally {
       spark.close()
     }
