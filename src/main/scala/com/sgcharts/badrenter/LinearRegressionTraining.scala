@@ -109,7 +109,6 @@ object LinearRegressionTraining extends Log4jLogging {
   private def linearRegression(): LinearRegression = {
     new LinearRegression()
       .setMaxIter(3)
-      .setRegParam(0.001)
       .setLabelCol("default_amount")
       .setFeaturesCol("features")
   }
@@ -149,6 +148,7 @@ object LinearRegressionTraining extends Log4jLogging {
         s"""
            |getEstimatorParamMaps=${lrm.getEstimatorParamMaps}
            |avgMetrics=${lrm.avgMetrics}
+           |explainParams=${lrm.explainParams}
          """.stripMargin)
       lrm.save("s3://com.sgcharts.ap-southeast-1/models/linear_regression_r2")
     } finally {
