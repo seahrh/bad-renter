@@ -37,7 +37,7 @@ object Cleaner extends Log4jLogging {
          |,trim(payment_date) payment_date
          |,payment_amount
          |,rent_amount
-         |,ROW_NUMBER() OVER (ORDER BY rand()) AS id
+         |,cast(ROW_NUMBER() OVER (ORDER BY rand()) as bigint) id
          |from ${params.srcDb}.${params.srcTable}
       """.stripMargin
     log.info(sql)
