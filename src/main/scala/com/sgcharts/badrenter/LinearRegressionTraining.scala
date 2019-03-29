@@ -131,7 +131,9 @@ object LinearRegressionTraining extends Log4jLogging {
     val grid = new ParamGridBuilder()
       .addGrid(lr.regParam, Array(0.1, 0.01))
       .build()
-    val eval = new RegressionEvaluator().setMetricName("r2")
+    val eval = new RegressionEvaluator()
+      .setMetricName("r2")
+      .setLabelCol("default_amount")
     val seed: Long = 11
     new CrossValidator()
       .setEstimator(pipe)
