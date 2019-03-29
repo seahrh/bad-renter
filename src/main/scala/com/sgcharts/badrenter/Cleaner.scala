@@ -30,11 +30,11 @@ object Cleaner extends Log4jLogging {
   private def extract()(implicit params: Params, spark: SparkSession): DataFrame = {
     val sql: String =
       s"""
-         |select trim(name)
-         |,trim(dob)
+         |select trim(name) name
+         |,trim(dob) dob
          |,house_id
          |,house_zip
-         |,trim(payment_date)
+         |,trim(payment_date) payment_date
          |,payment_amount
          |,rent_amount
          |,ROW_NUMBER() OVER (ORDER BY rand()) AS id
