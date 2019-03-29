@@ -2,7 +2,7 @@ package com.sgcharts.badrenter
 
 import java.time.format.DateTimeFormatter
 import java.time.{LocalDate, Period, ZoneOffset}
-import java.util.Date
+import java.sql.Date
 
 import org.apache.spark.sql.{DataFrame, Dataset, Encoders, Row, SparkSession}
 
@@ -161,7 +161,7 @@ private object Payment {
   }
 
   private def toDate(localDate: LocalDate): Date = {
-    Date.from(localDate.atStartOfDay(ZoneOffset.UTC).toInstant)
+    Date.valueOf(localDate)
   }
 
   private def toLocalDate(dateStr: String): LocalDate = {
