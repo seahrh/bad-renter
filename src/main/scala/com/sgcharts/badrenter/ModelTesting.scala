@@ -2,7 +2,7 @@ package com.sgcharts.badrenter
 
 import org.apache.spark.ml.tuning.CrossValidatorModel
 import org.apache.spark.mllib.evaluation.RegressionMetrics
-import org.apache.spark.sql.{DataFrame, SparkSession}
+import org.apache.spark.sql.{DataFrame, SaveMode, SparkSession}
 
 object ModelTesting extends Log4jLogging {
   private val APP_NAME: String = getClass.getName
@@ -12,7 +12,10 @@ object ModelTesting extends Log4jLogging {
                                               srcTable: String = "",
                                               testSetFirstId: Int = 0,
                                               modelPath: String = "",
-                                              partition: String = ""
+                                              partition: String = "",
+                                              sinkDb: String = "",
+                                              sinkTable: String = "",
+                                              sinkPath: String = ""
                                             )
 
   private def parse(args: Array[String]): Params = {
@@ -33,6 +36,15 @@ object ModelTesting extends Log4jLogging {
       opt[String]("partition").action((x, c) =>
         c.copy(partition = x)
       ).text("hive table partition specs")
+      opt[String]("sink_db").action((x, c) =>
+        c.copy(sinkDb = x)
+      ).text("hive database")
+      opt[String]("sink_table").action((x, c) =>
+        c.copy(sinkTable = x)
+      ).text("hive table")
+      opt[String]("sink_path").action((x, c) =>
+        c.copy(sinkPath = x)
+      ).text("path where partition is stored")
       help("help").text("prints this usage text")
     }
     // Load parameters
@@ -63,17 +75,26 @@ object ModelTesting extends Log4jLogging {
     spark.sql(sql)
   }
 
-  private def test(data: DataFrame)(implicit params: Params): Unit = {
+  private def test(data: DataFrame)(implicit params: Params, spark: SparkSession): Unit = {
     val model: CrossValidatorModel = CrossValidatorModel.load(params.modelPath)
     val transformed: DataFrame = model.transform(data)
     transformed.printSchema()
     val res = transformed.rdd.map { row =>
-        val pred = row.getAs[Double]("prediction")
-        val label = row.getAs[Int]("label").toDouble
-        (pred, label)
+      val pred = row.getAs[Double]("prediction")
+      val label = row.getAs[Int]("label").toDouble
+      (pred, label)
     }
     val metrics = new RegressionMetrics(res)
-    log.info(s"r2=${metrics.r2}, MAE=${metrics.meanAbsoluteError}")
+    val df: DataFrame = spark.createDataFrame(Seq(
+      (params.modelPath,
+        metrics.r2,
+        metrics.explainedVariance,
+        metrics.meanAbsoluteError,
+        metrics.meanSquaredError,
+        metrics.rootMeanSquaredError
+      )
+    )).toDF("model", "r2", "explained_var", "mae", "mse", "rmse")
+    df.write.mode(SaveMode.Append).parquet(params.sinkPath)
   }
 
   def main(args: Array[String]): Unit = {

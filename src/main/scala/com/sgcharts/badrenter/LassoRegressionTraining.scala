@@ -9,7 +9,7 @@ import org.apache.spark.ml.feature.{Bucketizer, OneHotEncoderEstimator, StringIn
 import org.apache.spark.ml.param.ParamMap
 import org.apache.spark.ml.regression.LinearRegression
 import org.apache.spark.ml.tuning.{CrossValidator, CrossValidatorModel, ParamGridBuilder}
-import org.apache.spark.sql.{DataFrame, SparkSession}
+import org.apache.spark.sql.{DataFrame, SaveMode, SparkSession}
 
 object LassoRegressionTraining extends Log4jLogging {
   private val APP_NAME: String = getClass.getName
@@ -19,7 +19,10 @@ object LassoRegressionTraining extends Log4jLogging {
                                               srcTable: String = "",
                                               testSetFirstId: Int = 0,
                                               modelPath: String = "",
-                                              partition: String = ""
+                                              partition: String = "",
+                                              sinkDb: String = "",
+                                              sinkTable: String = "",
+                                              sinkPath: String = ""
                                             )
 
   private def parse(args: Array[String]): Params = {
@@ -40,6 +43,15 @@ object LassoRegressionTraining extends Log4jLogging {
       opt[String]("partition").action((x, c) =>
         c.copy(partition = x)
       ).text("hive table partition specs")
+      opt[String]("sink_db").action((x, c) =>
+        c.copy(sinkDb = x)
+      ).text("hive database")
+      opt[String]("sink_table").action((x, c) =>
+        c.copy(sinkTable = x)
+      ).text("hive table")
+      opt[String]("sink_path").action((x, c) =>
+        c.copy(sinkPath = x)
+      ).text("path where partition is stored")
       help("help").text("prints this usage text")
     }
     // Load parameters
@@ -136,12 +148,29 @@ object LassoRegressionTraining extends Log4jLogging {
       .setEvaluator(eval)
       .setEstimatorParamMaps(grid)
       .setNumFolds(3)
-      .setParallelism(2)  // Evaluate up to 2 parameter settings in parallel
+      .setParallelism(2) // Evaluate up to 2 parameter settings in parallel
       .setSeed(seed)
   }
 
   private def timeSuffix: String = {
     LocalDateTime.now(ZoneOffset.UTC).format(DateTimeFormatter.ofPattern("yyyyMMdd_HHmmss"))
+  }
+
+  private def saveResult(vm: CrossValidatorModel)
+                        (implicit params: Params, spark: SparkSession): Unit = {
+    val bestParams: ParamMap = bestEstimatorParamMap(vm)
+    val res =
+      s"""getEstimatorParamMaps=${vm.getEstimatorParamMaps.toString}
+         |avgMetrics=${vm.avgMetrics.toString}
+         |explainParams=${vm.explainParams.toString}
+         |CrossValidatorModel=${vm.toString}
+         """.stripMargin
+    val modelPath = s"${params.modelPath}_$timeSuffix"
+    vm.save(modelPath)
+    val df: DataFrame = spark.createDataFrame(Seq(
+      (modelPath, res, bestParams.toString)
+    )).toDF("model", "result", "best_params")
+    df.write.mode(SaveMode.Append).parquet(params.sinkPath)
   }
 
   def main(args: Array[String]): Unit = {
@@ -155,16 +184,7 @@ object LassoRegressionTraining extends Log4jLogging {
       val train: DataFrame = extract()
       val v: CrossValidator = validator()
       val vm: CrossValidatorModel = v.fit(train)
-      val bestParams: ParamMap = bestEstimatorParamMap(vm)
-      log.info(
-        s"""
-           |bestParams=$bestParams
-           |getEstimatorParamMaps=${vm.getEstimatorParamMaps.toString}
-           |avgMetrics=${vm.avgMetrics.toString}
-           |explainParams=${vm.explainParams.toString}
-           |CrossValidatorModel=${vm.toString}
-         """.stripMargin)
-      vm.save(s"${params.modelPath}_$timeSuffix")
+      saveResult(vm)
     } finally {
       spark.close()
     }
