@@ -11,7 +11,8 @@ object ModelTesting extends Log4jLogging {
                                               srcDb: String = "",
                                               srcTable: String = "",
                                               testSetFirstId: Int = 0,
-                                              modelPath: String = ""
+                                              modelPath: String = "",
+                                              partition: String = ""
                                             )
 
   private def parse(args: Array[String]): Params = {
@@ -29,6 +30,9 @@ object ModelTesting extends Log4jLogging {
       opt[String]("model_path").action((x, c) =>
         c.copy(modelPath = x)
       ).text("model s3 location")
+      opt[String]("partition").action((x, c) =>
+        c.copy(partition = x)
+      ).text("hive table partition specs")
       help("help").text("prints this usage text")
     }
     // Load parameters
@@ -51,7 +55,8 @@ object ModelTesting extends Log4jLogging {
          |,rent_amount
          |,id
          |from ${params.srcDb}.${params.srcTable}
-         |where id>=${params.testSetFirstId}
+         |where ${params.partition}
+         |and id>=${params.testSetFirstId}
          |order by id
       """.stripMargin
     log.info(sql)
