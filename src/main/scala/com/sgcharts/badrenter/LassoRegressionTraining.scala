@@ -7,7 +7,7 @@ import org.apache.spark.ml.regression.LinearRegression
 import org.apache.spark.ml.tuning.{CrossValidator, CrossValidatorModel, ParamGridBuilder}
 import org.apache.spark.sql.{DataFrame, SparkSession}
 
-object LinearRegressionTraining extends Log4jLogging {
+object LassoRegressionTraining extends Log4jLogging {
   private val APP_NAME: String = getClass.getName
 
   private[badrenter] final case class Params(
@@ -114,22 +114,23 @@ object LinearRegressionTraining extends Log4jLogging {
       .setOutputCol("features")
   }
 
-  private def linearRegression(): LinearRegression = {
+  private def estimator(): LinearRegression = {
     new LinearRegression()
+      .setElasticNetParam(1) // L1 regularization Lasso
       .setMaxIter(3)
       .setLabelCol("default_amount")
       .setFeaturesCol("features")
   }
 
-  private def linearRegressionValidator(): CrossValidator = {
+  private def validator(): CrossValidator = {
     val ni = nameIndex()
     val oh = oneHotEncoder()
     val ab = ageBuckets()
     val fs = features()
-    val lr = linearRegression()
+    val lr = estimator()
     val pipe = new Pipeline().setStages(Array(ni, oh, ab, fs, lr))
     val grid = new ParamGridBuilder()
-      .addGrid(lr.regParam, Array(0.1, 0.01))
+      .addGrid(lr.regParam, Array(1, 0.1))
       .build()
     val eval = new RegressionEvaluator()
       .setMetricName("r2")
@@ -153,7 +154,7 @@ object LinearRegressionTraining extends Log4jLogging {
       .getOrCreate()
     try {
       val train: DataFrame = extract()
-      val lrv: CrossValidator = linearRegressionValidator()
+      val lrv: CrossValidator = validator()
       val lrm: CrossValidatorModel = lrv.fit(train)
       log.info(
         s"""
@@ -161,7 +162,7 @@ object LinearRegressionTraining extends Log4jLogging {
            |avgMetrics=${lrm.avgMetrics}
            |explainParams=${lrm.explainParams}
          """.stripMargin)
-      lrm.save("s3://com.sgcharts.ap-southeast-1/models/linear_regression_r2")
+      lrm.save("s3://com.sgcharts.ap-southeast-1/models/regression_lasso_r2")
     } finally {
       spark.close()
     }
