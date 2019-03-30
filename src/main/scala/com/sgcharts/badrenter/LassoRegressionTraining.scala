@@ -1,5 +1,8 @@
 package com.sgcharts.badrenter
 
+import java.time.format.DateTimeFormatter
+import java.time.{LocalDateTime, ZoneOffset}
+
 import org.apache.spark.ml.Pipeline
 import org.apache.spark.ml.evaluation.RegressionEvaluator
 import org.apache.spark.ml.feature.{Bucketizer, OneHotEncoderEstimator, StringIndexer, VectorAssembler}
@@ -14,7 +17,8 @@ object LassoRegressionTraining extends Log4jLogging {
   private[badrenter] final case class Params(
                                               srcDb: String = "",
                                               srcTable: String = "",
-                                              testSetFirstId: Int = 0
+                                              testSetFirstId: Int = 0,
+                                              modelPath: String = ""
                                             )
 
   private def parse(args: Array[String]): Params = {
@@ -29,6 +33,9 @@ object LassoRegressionTraining extends Log4jLogging {
       opt[Int]("test_set_first_id").action((x, c) =>
         c.copy(testSetFirstId = x)
       ).text("First id that marks the beginning of test set")
+      opt[String]("model_path").action((x, c) =>
+        c.copy(srcTable = x)
+      ).text("model s3 location")
       help("help").text("prints this usage text")
     }
     // Load parameters
@@ -130,6 +137,10 @@ object LassoRegressionTraining extends Log4jLogging {
       .setSeed(seed)
   }
 
+  private def timeSuffix: String = {
+    LocalDateTime.now(ZoneOffset.UTC).format(DateTimeFormatter.ofPattern("yyyyMMdd_HHmmss"))
+  }
+
   def main(args: Array[String]): Unit = {
     implicit val params: Params = parse(args = args)
     log.info(params)
@@ -150,7 +161,7 @@ object LassoRegressionTraining extends Log4jLogging {
            |explainParams=${vm.explainParams.toString}
            |CrossValidatorModel=${vm.toString}
          """.stripMargin)
-      vm.save("s3://com.sgcharts.ap-southeast-1/models/regression_lasso_r2")
+      vm.save(s"${params.modelPath}_$timeSuffix")
     } finally {
       spark.close()
     }
