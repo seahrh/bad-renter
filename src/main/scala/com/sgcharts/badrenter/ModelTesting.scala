@@ -63,7 +63,7 @@ object ModelTesting extends Log4jLogging {
     val transformed: DataFrame = model.transform(data)
     transformed.printSchema()
     val res = transformed.rdd.map { row =>
-        val pred = row.getAs[Int]("prediction").toDouble
+        val pred = row.getAs[Double]("prediction")
         val label = row.getAs[Int]("label").toDouble
         (pred, label)
     }
