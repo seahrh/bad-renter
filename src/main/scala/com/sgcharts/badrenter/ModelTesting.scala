@@ -27,7 +27,7 @@ object ModelTesting extends Log4jLogging {
         c.copy(testSetFirstId = x)
       ).text("First id that marks the beginning of test set")
       opt[String]("model_path").action((x, c) =>
-        c.copy(srcTable = x)
+        c.copy(modelPath = x)
       ).text("model s3 location")
       help("help").text("prints this usage text")
     }
