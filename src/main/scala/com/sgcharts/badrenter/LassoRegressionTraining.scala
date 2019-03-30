@@ -144,10 +144,11 @@ object LassoRegressionTraining extends Log4jLogging {
       val bestParams: ParamMap = bestEstimatorParamMap(vm)
       log.info(
         s"""
-           |getEstimatorParamMaps=${vm.getEstimatorParamMaps}
-           |avgMetrics=${vm.avgMetrics}
-           |explainParams=${vm.explainParams}
            |bestParams=$bestParams
+           |getEstimatorParamMaps=${vm.getEstimatorParamMaps.toString}
+           |avgMetrics=${vm.avgMetrics.toString}
+           |explainParams=${vm.explainParams.toString}
+           |CrossValidatorModel=${vm.toString}
          """.stripMargin)
       vm.save("s3://com.sgcharts.ap-southeast-1/models/regression_lasso_r2")
     } finally {
