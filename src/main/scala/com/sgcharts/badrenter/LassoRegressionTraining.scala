@@ -50,7 +50,7 @@ object LassoRegressionTraining extends Log4jLogging {
   private def extract()(implicit params: Params, spark: SparkSession): DataFrame = {
     val sql: String =
       s"""
-         |select default_amount
+         |select default_amount label
          |,name
          |,age
          |,house_id
@@ -110,7 +110,6 @@ object LassoRegressionTraining extends Log4jLogging {
     new LinearRegression()
       .setElasticNetParam(1) // L1 regularization Lasso
       .setMaxIter(3)
-      .setLabelCol("default_amount")
       .setFeaturesCol("features")
   }
 
@@ -126,7 +125,6 @@ object LassoRegressionTraining extends Log4jLogging {
       .build()
     val eval = new RegressionEvaluator()
       .setMetricName("r2")
-      .setLabelCol("default_amount")
     val seed: Long = 11
     new CrossValidator()
       .setEstimator(pipe)
