@@ -161,8 +161,8 @@ object LassoRegressionTraining extends Log4jLogging {
     val bestParams: ParamMap = bestEstimatorParamMap(vm)
     val res =
       s"""getEstimatorParamMaps=${vm.getEstimatorParamMaps.toString}
-         |avgMetrics=${vm.avgMetrics.toString}
-         |explainParams=${vm.explainParams.toString}
+         |avgMetrics=${vm.avgMetrics mkString ", "}
+         |explainParams=${vm.explainParams}
          |CrossValidatorModel=${vm.toString}
          """.stripMargin
     val modelPath = s"${params.modelPath}_$timeSuffix"
