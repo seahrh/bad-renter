@@ -3,6 +3,7 @@ package com.sgcharts.badrenter
 import org.apache.spark.ml.Pipeline
 import org.apache.spark.ml.evaluation.RegressionEvaluator
 import org.apache.spark.ml.feature.{Bucketizer, OneHotEncoderEstimator, StringIndexer, VectorAssembler}
+import org.apache.spark.ml.param.ParamMap
 import org.apache.spark.ml.regression.LinearRegression
 import org.apache.spark.ml.tuning.{CrossValidator, CrossValidatorModel, ParamGridBuilder}
 import org.apache.spark.sql.{DataFrame, SparkSession}
@@ -138,15 +139,17 @@ object LassoRegressionTraining extends Log4jLogging {
       .getOrCreate()
     try {
       val train: DataFrame = extract()
-      val lrv: CrossValidator = validator()
-      val lrm: CrossValidatorModel = lrv.fit(train)
+      val v: CrossValidator = validator()
+      val vm: CrossValidatorModel = v.fit(train)
+      val bestParams: ParamMap = bestEstimatorParamMap(vm)
       log.info(
         s"""
-           |getEstimatorParamMaps=${lrm.getEstimatorParamMaps}
-           |avgMetrics=${lrm.avgMetrics}
-           |explainParams=${lrm.explainParams}
+           |getEstimatorParamMaps=${vm.getEstimatorParamMaps}
+           |avgMetrics=${vm.avgMetrics}
+           |explainParams=${vm.explainParams}
+           |bestParams=$bestParams
          """.stripMargin)
-      lrm.save("s3://com.sgcharts.ap-southeast-1/models/regression_lasso_r2")
+      vm.save("s3://com.sgcharts.ap-southeast-1/models/regression_lasso_r2")
     } finally {
       spark.close()
     }
