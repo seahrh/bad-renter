@@ -47,10 +47,6 @@ object LassoRegressionTraining extends Log4jLogging {
          |,age
          |,house_id
          |,house_zip
-         |,payment_date_year
-         |,payment_date_month
-         |,payment_date_day_of_week
-         |,payment_date_day_of_month
          |,rent_amount
          |,id
          |from ${params.srcDb}.${params.srcTable}
@@ -73,20 +69,12 @@ object LassoRegressionTraining extends Log4jLogging {
       .setInputCols(Array(
         "name_index",
         "house_id",
-        "house_zip",
-        "payment_date_year",
-        "payment_date_month",
-        "payment_date_day_of_week",
-        "payment_date_day_of_month"
+        "house_zip"
       ))
       .setOutputCols(Array(
         "name_1hot",
         "house_id_1hot",
-        "house_zip_1hot",
-        "payment_date_year_1hot",
-        "payment_date_month_1hot",
-        "payment_date_day_of_week_1hot",
-        "payment_date_day_of_month_1hot"
+        "house_zip_1hot"
       ))
       .setHandleInvalid("keep")
   }
@@ -104,10 +92,6 @@ object LassoRegressionTraining extends Log4jLogging {
         "name_1hot",
         "house_id_1hot",
         "house_zip_1hot",
-        "payment_date_year_1hot",
-        "payment_date_month_1hot",
-        "payment_date_day_of_week_1hot",
-        "payment_date_day_of_month_1hot",
         "age_buckets",
         "rent_amount"
       ))
