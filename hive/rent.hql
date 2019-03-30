@@ -31,3 +31,22 @@ PARTITIONED BY (ds string comment 'datetime string in YYYYMMDD format')
 CLUSTERED BY(id) SORTED BY(payment_date) INTO 16 BUCKETS
 stored as parquet
 ;
+
+CREATE TABLE `rent`.`validation`(
+  `model` string,
+  `result` string,
+  `best_params` string
+)
+stored as parquet
+;
+
+CREATE TABLE `rent`.`test`(
+  `model` string,
+  `r2` double,
+  `explained_var` double,
+  `mae` double,
+  `mse` double,
+  `rmse` double
+)
+stored as parquet
+;
