@@ -2,7 +2,7 @@
 
 spark-submit --master yarn \
 --deploy-mode cluster \
---class com.sgcharts.badrenter.LinearRegressionTraining \
+--class com.sgcharts.badrenter.LassoRegressionTraining \
 s3://com.sgcharts.ap-southeast-1/deploy/bad-renter-assembly-0.1.0.jar \
 \
 --src_db rent \
