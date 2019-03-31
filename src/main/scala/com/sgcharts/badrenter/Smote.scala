@@ -127,7 +127,7 @@ final case class Smote(
     t.printSchema()
     val model: BucketedRandomProjectionLSHModel = lsh.fit(t)
     val schema = sample.schema
-    sample.mapPartitions(syntheticSampleByPartition(model, t))(RowEncoder(schema))
+    t.mapPartitions(syntheticSampleByPartition(model, t))(RowEncoder(schema))
       .selectExpr(allAttributes: _*)
   }
 
