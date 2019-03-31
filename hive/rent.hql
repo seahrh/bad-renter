@@ -32,6 +32,21 @@ CLUSTERED BY(id) SORTED BY(payment_date) INTO 16 BUCKETS
 stored as parquet
 ;
 
+CREATE TABLE `rent`.`train`(
+  `id` bigint,
+  `name` string,
+  `age` int,
+  `house_id` int,
+  `house_zip` int,
+  `rent_amount` int,
+  `default_amount` int,
+  `is_syn` boolean
+)
+PARTITIONED BY (ds string comment 'datetime string in YYYYMMDD format')
+CLUSTERED BY(id) SORTED BY(name) INTO 32 BUCKETS
+stored as parquet
+;
+
 CREATE TABLE `rent`.`validation`(
   `model` string,
   `result` string,
