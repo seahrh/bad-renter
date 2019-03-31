@@ -148,6 +148,7 @@ object Sampler extends Log4jLogging {
       val sizeMultiplier: Int = Math.max((majSize / minSize).toInt, 2)
       log.info(s"sizeMultiplier=$sizeMultiplier")
       val sample: DataFrame = min.toDF.selectExpr(
+        "name",
         "cast(house_id as bigint) as house_id",
         "cast(house_zip as bigint) as house_zip",
         "cast(age as double) as age",
