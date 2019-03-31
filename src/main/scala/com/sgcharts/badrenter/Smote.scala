@@ -104,14 +104,14 @@ final case class Smote(
 
   private def syntheticSampleByPartition(
                                           model: BucketedRandomProjectionLSHModel,
-                                          sample: DataFrame
+                                          dataset: DataFrame
                                         )(it: Iterator[Row]): Iterator[Row] = {
     it.flatMap { row =>
       val res: ArrayBuffer[Row] = ArrayBuffer()
       val key: Vector = row.getAs[Vector](featuresCol)
       for (_ <- 1 until sizeMultiplier) {
         val knn: Array[Row] = model.approxNearestNeighbors(
-          dataset = sample,
+          dataset = dataset,
           key = key,
           numNearestNeighbors = numNearestNeighbours
         ).toDF().collect()
@@ -124,6 +124,7 @@ final case class Smote(
 
   def syntheticSample(): DataFrame = {
     val t: DataFrame = transform()
+    t.printSchema()
     val model: BucketedRandomProjectionLSHModel = lsh.fit(t)
     val schema = sample.schema
     sample.mapPartitions(syntheticSampleByPartition(model, t))(RowEncoder(schema))
