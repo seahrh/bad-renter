@@ -1,11 +1,13 @@
 package com.sgcharts.badrenter
 
+import org.apache.spark.broadcast.Broadcast
 import org.apache.spark.ml
 import org.apache.spark.ml.feature._
 import org.apache.spark.ml.linalg.Vector
 import org.apache.spark.ml.{Pipeline, PipelineStage}
 import org.apache.spark.sql.catalyst.encoders.RowEncoder
-import org.apache.spark.sql.{DataFrame, Row}
+import org.apache.spark.sql.types.StructType
+import org.apache.spark.sql.{DataFrame, Row, SparkSession}
 
 import scala.collection.mutable.ArrayBuffer
 
@@ -18,7 +20,7 @@ final case class Smote(
                         numHashTables: Int = 1,
                         sizeMultiplier: Int = 2,
                         numNearestNeighbours: Int = 4
-                      ) {
+                      )(implicit spark: SparkSession) {
   private val rand = new scala.util.Random
   private val featuresCol: String = "com_sgcharts_smote_features"
   private val allAttributes: Seq[String] =
@@ -32,8 +34,8 @@ final case class Smote(
 
   private val oneHotEncoderOutputCols: Seq[String] =
     oneHotEncoderInputCols.map { s =>
-    s + "_1hot"
-  }
+      s + "_1hot"
+    }
 
   private val assemblerInputCols: Seq[String] = oneHotEncoderOutputCols ++ continuousAttributes
 
@@ -104,14 +106,16 @@ final case class Smote(
 
   private def syntheticSampleByPartition(
                                           model: BucketedRandomProjectionLSHModel,
-                                          dataset: DataFrame
+                                          broadcastData: Broadcast[Array[Row]],
+                                          schema: StructType
                                         )(it: Iterator[Row]): Iterator[Row] = {
+    val df: DataFrame = toDF(broadcastData.value, schema)
     it.flatMap { row =>
       val res: ArrayBuffer[Row] = ArrayBuffer()
       val key: Vector = row.getAs[Vector](featuresCol)
       for (_ <- 1 until sizeMultiplier) {
         val knn: Array[Row] = model.approxNearestNeighbors(
-          dataset = dataset,
+          dataset = df,
           key = key,
           numNearestNeighbors = numNearestNeighbours
         ).toDF().collect()
@@ -125,10 +129,18 @@ final case class Smote(
   def syntheticSample(): DataFrame = {
     val t: DataFrame = transform()
     t.printSchema()
+    val schema = t.schema
+    val broadcastData: Broadcast[Array[Row]] = spark.sparkContext
+      .broadcast[Array[Row]](t.collect())
     val model: BucketedRandomProjectionLSHModel = lsh.fit(t)
-    val schema = sample.schema
-    t.mapPartitions(syntheticSampleByPartition(model, t))(RowEncoder(schema))
+    val res: DataFrame = t.mapPartitions(syntheticSampleByPartition(
+      model = model,
+      broadcastData = broadcastData,
+      schema = schema
+    ))(RowEncoder(schema))
       .selectExpr(allAttributes: _*)
+    res.printSchema()
+    res
   }
 
 }

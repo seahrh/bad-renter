@@ -2,8 +2,9 @@ package com.sgcharts
 
 import org.apache.spark.ml.param.ParamMap
 import org.apache.spark.ml.tuning.CrossValidatorModel
-import org.apache.spark.sql.Row
+import org.apache.spark.sql.{DataFrame, Row, SparkSession}
 import org.apache.spark.sql.catalyst.expressions.GenericRowWithSchema
+import org.apache.spark.sql.types.StructType
 
 package object badrenter {
 
@@ -31,6 +32,11 @@ package object badrenter {
       vs ++= ovs.slice(i + 1, size)
     }
     new GenericRowWithSchema(vs.toArray, origin.schema)
+  }
+
+  @SuppressWarnings(Array("org.wartremover.warts.Nothing"))
+  def toDF(rows: Array[Row], schema: StructType)(implicit spark: SparkSession): DataFrame = {
+    spark.sqlContext.createDataFrame(spark.sparkContext.parallelize(rows), schema)
   }
 
 }
