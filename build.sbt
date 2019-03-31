@@ -31,7 +31,8 @@ wartremoverErrors ++= Warts.allBut(
   Wart.NonUnitStatements,
   Wart.Var,
   Wart.Overloading,
-  Wart.MutableDataStructures
+  Wart.MutableDataStructures,
+  Wart.Equals
 )
 fork in Test := true
 parallelExecution in Test := false
