@@ -68,6 +68,7 @@ object Sampler extends Log4jLogging {
          |,house_zip
          |,rent_amount
          |,default_amount
+         |,false is_syn
          |from ${params.srcDb}.${params.srcTable}
          |where ${params.partition}
          |and id<${params.testSetFirstId}
@@ -93,7 +94,8 @@ object Sampler extends Log4jLogging {
          |,house_zip
          |,rent_amount
          |,default_amount
-         |from ${params.srcDb}.${params.srcTable}
+         |,is_syn
+         |from ${params.sinkDb}.${params.sinkTable}
          |where ${params.partition}
       """.stripMargin
     log.info(sql)
@@ -179,7 +181,8 @@ object Sampler extends Log4jLogging {
                                     house_id: Int,
                                     house_zip: Int,
                                     rent_amount: Int,
-                                    default_amount: Int
+                                    default_amount: Int,
+                                    is_syn: Boolean
                                   )
 
   private object Payment {
@@ -197,7 +200,8 @@ object Sampler extends Log4jLogging {
         house_id = house_id,
         house_zip = house_zip,
         rent_amount = rent_amount,
-        default_amount = default_amount
+        default_amount = default_amount,
+        is_syn = true
       )
     }
   }
