@@ -104,7 +104,8 @@ final case class Smote(
   def syntheticSample(): DataFrame = {
     val t: DataFrame = transform()
     val model: BucketedRandomProjectionLSHModel = lsh.fit(t)
-    val lshDf: DataFrame = model.transform(t)
+    // merge into 1 partition for less network cost in approxNearestNeighbors
+    val lshDf: DataFrame = model.transform(t).coalesce(1)
     val schema = lshDf.schema
     log.info(s"lshDf.count=${lshDf.count}\nlshDf.schema=$schema")
     val rows: Array[Row] = lshDf.collect()
