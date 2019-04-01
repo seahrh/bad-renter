@@ -36,7 +36,10 @@ package object badrenter {
 
   // based on https://stackoverflow.com/a/40801637/519951
   def toDF(rows: Array[Row], schema: StructType)(implicit spark: SparkSession): DataFrame = {
-    spark.sqlContext.createDataFrame(spark.sparkContext.parallelize(rows), schema)
+    spark.sqlContext.createDataFrame(
+      spark.sparkContext.parallelize(rows),
+      schema
+    )
   }
 
 }

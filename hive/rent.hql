@@ -43,7 +43,6 @@ CREATE TABLE `rent`.`train`(
   `is_syn` boolean
 )
 PARTITIONED BY (ds string comment 'datetime string in YYYYMMDD format')
-CLUSTERED BY(id) SORTED BY(name) INTO 32 BUCKETS
 stored as parquet
 ;
 

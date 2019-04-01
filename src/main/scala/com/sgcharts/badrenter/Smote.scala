@@ -109,7 +109,8 @@ final case class Smote(
                                           broadcastData: Broadcast[Array[Row]],
                                           schema: StructType
                                         )(it: Iterator[Row]): Iterator[Row] = {
-    val df: DataFrame = toDF(broadcastData.value, schema)
+    log.info(s"schema=$schema")
+    val df: DataFrame = toDF(broadcastData.value, schema).cache()
     it.flatMap { row =>
       val res: ArrayBuffer[Row] = ArrayBuffer()
       val key: Vector = row.getAs[Vector](featuresCol)
@@ -128,9 +129,10 @@ final case class Smote(
 
   def syntheticSample(): DataFrame = {
     val t: DataFrame = transform()
-    log.info("t.schema")
+    log.info(s"t.count=${t.count()}, t.schema")
     t.printSchema()
     val schema = t.schema
+    log.info(s"t.schema=${t.schema.toString}")
     val broadcastData: Broadcast[Array[Row]] = spark.sparkContext
       .broadcast[Array[Row]](t.collect())
     val model: BucketedRandomProjectionLSHModel = lsh.fit(t)
