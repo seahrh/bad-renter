@@ -84,22 +84,21 @@ object Sampler extends Log4jLogging {
     })
   }
 
-  private def shuffle()(implicit params: Params, spark: SparkSession): Unit = {
-    val sql: String =
-      s"""
-         |select cast(ROW_NUMBER() OVER (ORDER BY rand()) as bigint) id
-         |,name
-         |,age
-         |,house_id
-         |,house_zip
-         |,rent_amount
-         |,default_amount
-         |,is_syn
-         |from ${params.sinkDb}.${params.sinkTable}
-         |where ${params.partition}
-      """.stripMargin
-    log.info(sql)
-    val ds = spark.sql(sql).as[Payment](Encoders.product[Payment])
+  private def load(
+                    originalSample: Dataset[Payment],
+                    syntheticSample: Dataset[Payment]
+                  )(implicit params: Params, spark: SparkSession): Unit = {
+    val ds: Dataset[Payment] = union(originalSample.toDF, syntheticSample.toDF)
+      .selectExpr(
+        "cast(ROW_NUMBER() OVER (ORDER BY rand()) as bigint) id",
+        "name",
+        "age",
+        "house_id",
+        "house_zip",
+        "rent_amount",
+        "default_amount",
+        "is_syn"
+      ).as[Payment](Encoders.product[Payment])
     ParquetTablePartition[Payment](
       ds = ds,
       db = params.sinkDb,
@@ -107,28 +106,6 @@ object Sampler extends Log4jLogging {
       path = params.sinkPath,
       partition = params.partition
     ).overwrite()
-  }
-
-  private def loadOriginalSample(ds: Dataset[Payment])
-                                (implicit params: Params, spark: SparkSession): Unit = {
-    ParquetTablePartition[Payment](
-      ds = ds,
-      db = params.sinkDb,
-      table = params.sinkTable,
-      path = params.sinkPath,
-      partition = params.partition
-    ).overwrite()
-  }
-
-  private def loadSyntheticSample(ds: Dataset[Payment])
-                                (implicit params: Params, spark: SparkSession): Unit = {
-    ParquetTablePartition[Payment](
-      ds = ds,
-      db = params.sinkDb,
-      table = params.sinkTable,
-      path = params.sinkPath,
-      partition = params.partition
-    ).append()
   }
 
   def main(args: Array[String]): Unit = {
@@ -140,7 +117,6 @@ object Sampler extends Log4jLogging {
       .getOrCreate()
     try {
       val data: Dataset[Payment] = extract()
-      loadOriginalSample(data)
       val maj = data.filter(_.default_amount == 0)
       val majSize: Long = maj.count()
       val min = data.filter(_.default_amount != 0)
@@ -166,8 +142,7 @@ object Sampler extends Log4jLogging {
         numNearestNeighbours = params.smoteK
       ).syntheticSample()
       val syn: Dataset[Payment] = synDf.mapPartitions(transform)(Encoders.product[Payment])
-      loadSyntheticSample(syn)
-      shuffle()
+      load(data, syn)
     } finally {
       spark.close()
     }

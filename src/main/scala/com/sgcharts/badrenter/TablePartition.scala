@@ -52,13 +52,11 @@ final case class ParquetTablePartition[T](
   override def overwrite(): Unit = {
     writer(SaveMode.Overwrite).parquet(path)
     addPartition()
-    spark.sql(s"refresh table $db.$table")
   }
 
   override def append(): Unit = {
     writer(SaveMode.Append).parquet(path)
     addPartition()
-    spark.sql(s"refresh table $db.$table")
   }
 }
 

@@ -70,7 +70,7 @@ final case class Smote(
     model.transform(sample)
   }
 
-  private def child(left: Row, right: Row): Row = {
+  private[badrenter] def child(left: Row, right: Row): Row = {
     var res: Row = left
     for (c <- continuousAttributes) {
       val lc: Double = left.getAs[Double](c)
