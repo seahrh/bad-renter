@@ -1,12 +1,9 @@
 package com.sgcharts.badrenter
 
-import org.apache.spark.broadcast.Broadcast
 import org.apache.spark.ml
 import org.apache.spark.ml.feature._
 import org.apache.spark.ml.linalg.Vector
 import org.apache.spark.ml.{Pipeline, PipelineStage}
-import org.apache.spark.sql.catalyst.encoders.RowEncoder
-import org.apache.spark.sql.types.StructType
 import org.apache.spark.sql.{DataFrame, Row, SparkSession}
 
 import scala.collection.mutable.ArrayBuffer
@@ -104,47 +101,27 @@ final case class Smote(
     res
   }
 
-  private def syntheticSampleByPartition(
-                                          model: BucketedRandomProjectionLSHModel,
-                                          broadcastData: Broadcast[Array[Row]],
-                                          schema: StructType
-                                        )(it: Iterator[Row]): Iterator[Row] = {
-    log.info(s"broadcastData.length=${broadcastData.value.length}\nschema=$schema")
-    val df: DataFrame = toDF(broadcastData.value, schema).cache()
-    it.flatMap { row =>
-      val res: ArrayBuffer[Row] = ArrayBuffer()
+  def syntheticSample(): DataFrame = {
+    val t: DataFrame = transform()
+    val model: BucketedRandomProjectionLSHModel = lsh.fit(t)
+    val lshDf: DataFrame = model.transform(t)
+    val schema = lshDf.schema
+    log.info(s"lshDf.count=${lshDf.count}\nlshDf.schema=$schema")
+    val rows: Array[Row] = lshDf.collect()
+    val res: ArrayBuffer[Row] = ArrayBuffer()
+    for (row <- rows) {
       val key: Vector = row.getAs[Vector](featuresCol)
       for (_ <- 1 until sizeMultiplier) {
         val knn: Array[Row] = model.approxNearestNeighbors(
-          dataset = df,
+          dataset = lshDf,
           key = key,
           numNearestNeighbors = numNearestNeighbours
         ).toDF().collect()
         val nn: Row = knn(rand.nextInt(knn.length))
         res += child(row, nn)
       }
-      res
     }
-  }
-
-  def syntheticSample(): DataFrame = {
-    val t: DataFrame = transform()
-    log.info(s"t.count=${t.count()}, t.schema")
-    t.printSchema()
-    val schema = t.schema
-    log.info(s"t.schema=${t.schema.toString}")
-    val broadcastData: Broadcast[Array[Row]] = spark.sparkContext
-      .broadcast[Array[Row]](t.collect())
-    val model: BucketedRandomProjectionLSHModel = lsh.fit(t)
-    val res: DataFrame = t.mapPartitions(syntheticSampleByPartition(
-      model = model,
-      broadcastData = broadcastData,
-      schema = schema
-    ))(RowEncoder(schema))
-      .selectExpr(allAttributes: _*)
-    log.info("res.schema")
-    res.printSchema()
-    res
+    toDF(res.toArray, schema).selectExpr(allAttributes: _*)
   }
 
 }
