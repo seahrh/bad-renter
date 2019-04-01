@@ -17,7 +17,6 @@ object LassoRegressionTraining extends Log4jLogging {
   private[badrenter] final case class Params(
                                               srcDb: String = "",
                                               srcTable: String = "",
-                                              testSetFirstId: Int = 0,
                                               modelPath: String = "",
                                               partition: String = "",
                                               sinkDb: String = "",
@@ -34,9 +33,6 @@ object LassoRegressionTraining extends Log4jLogging {
       opt[String]("src_table").action((x, c) =>
         c.copy(srcTable = x)
       ).text("source table")
-      opt[Int]("test_set_first_id").action((x, c) =>
-        c.copy(testSetFirstId = x)
-      ).text("First id that marks the beginning of test set")
       opt[String]("model_path").action((x, c) =>
         c.copy(modelPath = x)
       ).text("model s3 location")
@@ -75,7 +71,6 @@ object LassoRegressionTraining extends Log4jLogging {
          |,id
          |from ${params.srcDb}.${params.srcTable}
          |where ${params.partition}
-         |and id<${params.testSetFirstId}
          |order by id
       """.stripMargin
     log.info(sql)
