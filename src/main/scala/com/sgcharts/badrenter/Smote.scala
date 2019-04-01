@@ -20,7 +20,7 @@ final case class Smote(
                         numHashTables: Int = 1,
                         sizeMultiplier: Int = 2,
                         numNearestNeighbours: Int = 4
-                      )(implicit spark: SparkSession) {
+                      )(implicit spark: SparkSession) extends Log4jLogging {
   private val rand = new scala.util.Random
   private val featuresCol: String = "com_sgcharts_smote_features"
   private val allAttributes: Seq[String] =
@@ -128,6 +128,7 @@ final case class Smote(
 
   def syntheticSample(): DataFrame = {
     val t: DataFrame = transform()
+    log.info("t.schema")
     t.printSchema()
     val schema = t.schema
     val broadcastData: Broadcast[Array[Row]] = spark.sparkContext
@@ -139,6 +140,7 @@ final case class Smote(
       schema = schema
     ))(RowEncoder(schema))
       .selectExpr(allAttributes: _*)
+    log.info("res.schema")
     res.printSchema()
     res
   }
