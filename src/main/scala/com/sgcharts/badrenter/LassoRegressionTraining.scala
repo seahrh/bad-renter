@@ -77,63 +77,50 @@ object LassoRegressionTraining extends Log4jLogging {
     spark.sql(sql)
   }
 
-  private def nameIndex(): StringIndexer = {
-    new StringIndexer()
-      .setInputCol("name")
-      .setOutputCol("name_index")
-      .setHandleInvalid("keep")
-  }
+  private val nameIndex: StringIndexer = new StringIndexer()
+    .setInputCol("name")
+    .setOutputCol("name_index")
+    .setHandleInvalid("keep")
 
-  private def oneHotEncoder(): OneHotEncoderEstimator = {
-    new OneHotEncoderEstimator()
-      .setInputCols(Array(
-        "name_index",
-        "house_id",
-        "house_zip"
-      ))
-      .setOutputCols(Array(
-        "name_1hot",
-        "house_id_1hot",
-        "house_zip_1hot"
-      ))
-      .setHandleInvalid("keep")
-  }
 
-  private def ageBuckets(): Bucketizer = {
-    new Bucketizer()
-      .setInputCol("age")
-      .setOutputCol("age_buckets")
-      .setSplits(Array(Double.NegativeInfinity, 0.0, 20.0, 30.0, 40.0, 50.0, 60.0, Double.PositiveInfinity))
-  }
+  private val oneHotEncoder: OneHotEncoderEstimator = new OneHotEncoderEstimator()
+    .setInputCols(Array(
+      "name_index",
+      "house_id",
+      "house_zip"
+    ))
+    .setOutputCols(Array(
+      "name_1hot",
+      "house_id_1hot",
+      "house_zip_1hot"
+    ))
+    .setHandleInvalid("keep")
 
-  private def features(): VectorAssembler = {
-    new VectorAssembler()
-      .setInputCols(Array(
-        "name_1hot",
-        "house_id_1hot",
-        "house_zip_1hot",
-        "age_buckets",
-        "rent_amount"
-      ))
-      .setOutputCol("features")
-  }
+  private val ageBuckets: Bucketizer = new Bucketizer()
+    .setInputCol("age")
+    .setOutputCol("age_buckets")
+    .setSplits(Array(Double.NegativeInfinity, 0.0, 20.0, 30.0, 40.0, 50.0, 60.0, Double.PositiveInfinity))
 
-  private def estimator(): LinearRegression = {
-    new LinearRegression()
-      .setElasticNetParam(1) // L1 regularization Lasso
-      .setMaxIter(3)
-      .setFeaturesCol("features")
-  }
+  private val features: VectorAssembler = new VectorAssembler()
+    .setInputCols(Array(
+      "name_1hot",
+      "house_id_1hot",
+      "house_zip_1hot",
+      "age_buckets",
+      "rent_amount"
+    ))
+    .setOutputCol("features")
 
-  private def validator(): CrossValidator = {
-    val ni = nameIndex()
-    val oh = oneHotEncoder()
-    val ab = ageBuckets()
-    val fs = features()
-    val lr = estimator()
-    val pipe = new Pipeline().setStages(Array(ni, oh, ab, fs, lr))
+  private val estimator: LinearRegression = new LinearRegression()
+    .setElasticNetParam(1) // L1 regularization Lasso
+    .setMaxIter(3)
+    .setFeaturesCol("features")
+
+  private val validator: CrossValidator = {
+    val pipe = new Pipeline().setStages(Array(
+      nameIndex, oneHotEncoder, ageBuckets, features, estimator))
     val grid = new ParamGridBuilder()
-      .addGrid(lr.regParam, Array(1, 0.1))
+      .addGrid(estimator.regParam, Array(1, 0.1))
       .build()
     val eval = new RegressionEvaluator()
       .setMetricName("r2")
@@ -176,9 +163,8 @@ object LassoRegressionTraining extends Log4jLogging {
       .enableHiveSupport()
       .getOrCreate()
     try {
-      val train: DataFrame = extract()
-      val v: CrossValidator = validator()
-      val vm: CrossValidatorModel = v.fit(train)
+      val train: DataFrame = extract().coalesce(1).cache()
+      val vm: CrossValidatorModel = validator.fit(train)
       saveResult(vm)
     } finally {
       spark.close()
