@@ -3,8 +3,8 @@
 spark-submit --master yarn \
 --deploy-mode cluster \
 --conf spark.dynamicAllocation.enabled=false \
---conf spark.driver.memory=4G \
---conf spark.executor.memory=17G \
+--conf spark.driver.memory=5g \
+--conf spark.executor.memory=19g \
 --conf spark.executor.cores=4 \
 --class com.sgcharts.badrenter.Sampler \
 s3://com.sgcharts.ap-southeast-1/deploy/bad-renter-assembly-0.1.0.jar \
