@@ -109,7 +109,7 @@ final case class Smote(
                                           broadcastData: Broadcast[Array[Row]],
                                           schema: StructType
                                         )(it: Iterator[Row]): Iterator[Row] = {
-    log.info(s"schema=$schema")
+    log.info(s"broadcastData.length=${broadcastData.value.length}\nschema=$schema")
     val df: DataFrame = toDF(broadcastData.value, schema).cache()
     it.flatMap { row =>
       val res: ArrayBuffer[Row] = ArrayBuffer()

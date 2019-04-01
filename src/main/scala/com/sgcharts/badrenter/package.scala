@@ -5,6 +5,7 @@ import org.apache.spark.ml.tuning.CrossValidatorModel
 import org.apache.spark.sql.{DataFrame, Row, SparkSession}
 import org.apache.spark.sql.catalyst.expressions.GenericRowWithSchema
 import org.apache.spark.sql.types.StructType
+import scala.collection.JavaConverters._
 
 package object badrenter {
 
@@ -36,10 +37,7 @@ package object badrenter {
 
   // based on https://stackoverflow.com/a/40801637/519951
   def toDF(rows: Array[Row], schema: StructType)(implicit spark: SparkSession): DataFrame = {
-    spark.sqlContext.createDataFrame(
-      spark.sparkContext.parallelize(rows),
-      schema
-    )
+    spark.createDataFrame(rows.toList.asJava, schema)
   }
 
 }
