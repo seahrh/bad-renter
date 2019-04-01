@@ -83,7 +83,7 @@ object ModelTesting extends Log4jLogging {
       val pred = row.getAs[Double]("prediction")
       val label = row.getAs[Int]("label").toDouble
       (pred, label)
-    }
+    }.coalesce(1)
     val metrics = new RegressionMetrics(res)
     val df: DataFrame = spark.createDataFrame(Seq(
       (params.modelPath,
@@ -105,7 +105,7 @@ object ModelTesting extends Log4jLogging {
       .enableHiveSupport()
       .getOrCreate()
     try {
-      val data: DataFrame = extract()
+      val data: DataFrame = extract().coalesce(1)
       test(data)
     } finally {
       spark.close()
