@@ -2,7 +2,6 @@
 
 spark-submit --master yarn \
 --deploy-mode cluster \
---conf spark.driver.memory=2G \
 --class com.sgcharts.badrenter.Sampler \
 s3://com.sgcharts.ap-southeast-1/deploy/bad-renter-assembly-0.1.0.jar \
 \
