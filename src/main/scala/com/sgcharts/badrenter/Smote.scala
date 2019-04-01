@@ -112,12 +112,12 @@ final case class Smote(
     val res: ArrayBuffer[Row] = ArrayBuffer()
     for (row <- rows) {
       val key: Vector = row.getAs[Vector](featuresCol)
+      val knn: Array[Row] = model.approxNearestNeighbors(
+        dataset = lshDf,
+        key = key,
+        numNearestNeighbors = numNearestNeighbours
+      ).toDF().collect()
       for (_ <- 1 until sizeMultiplier) {
-        val knn: Array[Row] = model.approxNearestNeighbors(
-          dataset = lshDf,
-          key = key,
-          numNearestNeighbors = numNearestNeighbours
-        ).toDF().collect()
         val nn: Row = knn(rand.nextInt(knn.length))
         res += child(row, nn)
       }
