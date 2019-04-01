@@ -50,15 +50,15 @@ final case class ParquetTablePartition[T](
   override val sparkSession: SparkSession = spark
 
   override def overwrite(): Unit = {
-    spark.catalog.refreshTable(s"$db.$table")
     writer(SaveMode.Overwrite).parquet(path)
     addPartition()
+    spark.sql(s"refresh table $db.$table")
   }
 
   override def append(): Unit = {
-    spark.catalog.refreshTable(s"$db.$table")
     writer(SaveMode.Append).parquet(path)
     addPartition()
+    spark.sql(s"refresh table $db.$table")
   }
 }
 
