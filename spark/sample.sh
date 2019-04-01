@@ -16,5 +16,5 @@ s3://com.sgcharts.ap-southeast-1/deploy/bad-renter-assembly-0.1.0.jar \
 --partition ds='20190326' \
 --sink_path s3://com.sgcharts.ap-southeast-1/hive/warehouse/rent.db/train/ds=20190326 \
 --test_set_first_id 53833 \
---smote_bucket_length 1000 \
+--smote_bucket_length 10 \
 --smote_k 10
