@@ -3,7 +3,7 @@
 spark-submit --master yarn \
 --deploy-mode cluster \
 --class com.sgcharts.badrenter.ModelTesting \
-s3://com.sgcharts.ap-southeast-1/deploy/bad-renter-assembly-0.1.0.jar \
+s3://com.sgcharts.ap-southeast-1/deploy/bad-renter-assembly-1.0.jar \
 \
 --src_db rent \
 --src_table payment \

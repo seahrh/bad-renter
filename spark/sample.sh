@@ -7,7 +7,7 @@ spark-submit --master yarn \
 --conf spark.executor.memory=16g \
 --conf spark.executor.cores=4 \
 --class com.sgcharts.badrenter.Sampler \
-s3://com.sgcharts.ap-southeast-1/deploy/bad-renter-assembly-0.1.0.jar \
+s3://com.sgcharts.ap-southeast-1/deploy/bad-renter-assembly-1.0.jar \
 \
 --src_db rent \
 --src_table payment \
