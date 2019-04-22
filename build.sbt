@@ -3,7 +3,7 @@ lazy val root = (project in file(".")).
     inThisBuild(List(
       organization := "com.sgcharts",
       scalaVersion := "2.11.12",
-      version      := "1.0"
+      version      := "1.1"
     )),
     name := "bad-renter",
     libraryDependencies ++= Seq(
@@ -12,7 +12,8 @@ lazy val root = (project in file(".")).
       "org.apache.spark" %% "spark-hive" % versions.spark % Provided,
       "com.holdenkarau" %% "spark-testing-base" % versions.sparkTestingBase % Test,
       "org.apache.spark" %% "spark-mllib" % versions.spark % Provided,
-      "com.github.scopt" %% "scopt" % versions.scopt
+      "com.github.scopt" %% "scopt" % versions.scopt,
+      "com.sgcharts" %% "spark-util" % "0.4.0"
     )
   )
 lazy val versions = new {

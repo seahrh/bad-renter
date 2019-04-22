@@ -2,12 +2,8 @@
 
 spark-submit --master yarn \
 --deploy-mode cluster \
---conf spark.dynamicAllocation.enabled=false \
---conf spark.driver.memory=5g \
---conf spark.executor.memory=16g \
---conf spark.executor.cores=4 \
 --class com.sgcharts.badrenter.Sampler \
-s3://com.sgcharts.ap-southeast-1/deploy/bad-renter-assembly-1.0.jar \
+s3://com.sgcharts.ap-southeast-1/deploy/bad-renter-assembly-1.1.jar \
 \
 --src_db rent \
 --src_table payment \

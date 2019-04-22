@@ -1,6 +1,7 @@
 package com.sgcharts.badrenter
 
 import org.apache.spark.sql.{DataFrame, Dataset, Encoders, Row, SparkSession}
+import com.sgcharts.sparkutil.Smote
 
 object Sampler extends Log4jLogging {
   private val APP_NAME: String = getClass.getName
@@ -136,11 +137,10 @@ object Sampler extends Log4jLogging {
         discreteStringAttributes = Seq("name"),
         discreteLongAttributes = Seq("house_id", "house_zip"),
         continuousAttributes = Seq("age", "rent_amount", "default_amount"),
-        bucketLength = params.smoteBucketLength,
         numHashTables = 2,
         sizeMultiplier = sizeMultiplier,
         numNearestNeighbours = params.smoteK
-      ).syntheticSample()
+      ).syntheticSample
       val syn: Dataset[Payment] = synDf.mapPartitions(transform)(Encoders.product[Payment])
       load(data, syn)
     } finally {
